@@ -1,0 +1,21 @@
+{
+  "task": "recall",
+  "model": "srnn",
+  "epochs": 15,
+  "batch_size": 64,
+  "lr": 0.001,
+  "length": 8,
+  "seed": 42,
+  "device": "cpu",
+  "quick": false,
+  "output": "runs",
+  "source_sha256": "83c8fed10ac32085a76ef685c959a133d9991bc0210ae02f26f88931accd6cc7",
+  "numpy": "2.2.6",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.39",
+  "data_sha256": "48cdf7595be5d965bf208d104fcf23883f5d1c8357eb160e48fb4a657fa22cba",
+  "torch": "2.7.1+cpu",
+  "sklearn": "1.6.1",
+  "python": "3.12.14",
+  "device_name": "x86_64",
+  "comparison_group": "b1840a09c84018f7"
+}
