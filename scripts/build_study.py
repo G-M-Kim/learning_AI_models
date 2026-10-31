@@ -1,0 +1,160 @@
+"""Regenerate the self-contained Korean illustrated study guide (no JS packages)."""
+from pathlib import Path
+from html import escape
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from ailab.data import datasets, VOCAB
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def flow(labels):
+    width = 820
+    step = width/len(labels)
+    svg = ['<svg viewBox="0 0 840 100" role="img" aria-label="model tensor flow">']
+    for i, label in enumerate(labels):
+        x = 10+i*step
+        svg += [f'<rect x="{x}" y="20" width="{step-18}" height="55" rx="9" fill="#203650" stroke="#61dfd2"/>',
+                f'<text x="{x+(step-18)/2}" y="52" text-anchor="middle" fill="#eef7ff" font-size="14">{escape(label)}</text>']
+        if i < len(labels)-1:
+            svg.append(f'<path d="M{x+step-17} 47h15m-5-5 5 5-5 5" stroke="#98aeca" fill="none"/>')
+    return ''.join(svg)+'</svg>'
+
+
+def recurrence(gated=False):
+    svg=['<svg viewBox="0 0 820 160" role="img" aria-label="unrolled recurrent network">']
+    for i in range(4):
+        x=25+i*195
+        svg.append(f'<rect x="{x}" y="45" width="135" height="65" rx="12" fill="#203650" stroke="#ae99ff"/><text x="{x+67}" y="83" text-anchor="middle" fill="white">{"gate + cell" if gated else "shared cell"}</text><text x="{x+67}" y="145" text-anchor="middle" fill="#61dfd2">x[{i}]</text><path d="M{x+67} 128v-18" stroke="#61dfd2"/>')
+        if i<3:
+            svg.append(f'<path d="M{x+135} 73h60m-8-5 8 5-8 5" stroke="#ae99ff" fill="none"/><text x="{x+160}" y="35" fill="#ccd">h</text>')
+    return ''.join(svg)+'</svg>'
+
+
+chapters = [
+('dnn','01 · DNN / MLP','입력의 모든 위치를 연결해 비선형 경계를 배운다.',
+ ['8×8 → 64','Linear 64 + ReLU','Linear 32 + ReLU','logits 10'],
+ 'h = ReLU(Wx + b); logits = W₂h + b₂',
+ 'digits','dnn','ImageMLP',
+ '이미지를 [B,1,8,8]에서 [B,64]로 편 뒤 학습합니다. 출력 10개는 확률이 아니라 logits입니다. CrossEntropyLoss 안에 log-softmax가 포함되므로 모델 마지막에 softmax를 붙이지 않습니다.',
+ 'epochs를 1, 5, 15로 늘려 train/validation loss를 비교하세요. loss가 줄지 않으면 입력 정규화·정답 dtype(long)·learning rate를 먼저 봅니다.',
+ '픽셀 위치마다 다른 가중치를 쓰므로 위치 이동을 자동으로 처리하지 않습니다. 하지만 8×8처럼 작고 정렬된 데이터에서는 CNN보다 좋은 결과도 충분히 가능합니다.'),
+('snn','02 · LIF SNN','시간에 걸쳐 전압을 쌓고 임계값을 넘으면 발화한다.',
+ ['image → current','LIF × 8 steps','mean spike rate','Linear → 10'],
+ 'u[t] = 0.9u[t−1] + I; s[t] = 1(u[t] > 1); u[t] ← u[t] − stopgrad(s[t])',
+ 'digits','snn','Spike / lif / ImageSNN',
+ '동일 이미지에서 얻은 analog current를 8번 반복 주입합니다. 입력은 Poisson spike가 아닙니다. spike 비율을 선형 분류기에 넣습니다. hard threshold의 실제 도함수 대신 backward에서 surrogate 1/(1+5|u−1|)²를 사용합니다.',
+ 'ImageSNN.steps를 4/8/16으로 바꾸어 실험하세요. 이 값은 config 코드 hash로 구분되지만 별도 output 폴더도 사용하고 코드 변경 commit도 기록하세요. 짧은 시간에서 spike rate의 해상도가 얼마나 거친지 보세요.',
+ '일반 GPU의 dense 연산으로 SNN을 시뮬레이션합니다. spike가 0이라고 자동으로 전력을 아끼지는 않습니다. 시간축을 늘리면 연산과 BPTT 메모리가 늘 수 있습니다.'),
+('cnn','03 · CNN','작은 커널을 여러 위치에서 재사용한다.',
+ ['8×8×1','conv 8 + pool','conv 16 → 4×4','flatten → 10'],
+ 'Y[h,w,o] = Σ K[i,j,c,o] X[h+i,w+j,c]',
+ 'digits','cnn','ImageCNN',
+ '첫 3×3 kernel은 주변 픽셀만 봅니다. 커널을 공간 전체에서 공유하므로 MLP보다 영상 구조를 직접 반영합니다. pooling 뒤 공간은 4×4, 두 번째 conv 출력은 [B,16,4,4]입니다.',
+ '동일한 digits split에서 DNN과 accuracy·params를 비교하세요. CNN의 파라미터 수가 작거나 비슷해도 성능이 어떤지 관찰하세요.',
+ 'CNN이 항상 우승하지 않습니다. 이 작은 dataset에서는 정보 손실을 일으키는 pooling과 학습 budget이 결과를 바꿉니다. 위치 변화 강건성을 주장하려면 별도 shift test가 필요합니다.'),
+('scnn','04 · Spiking CNN','공간적 필터와 시간적 발화를 함께 사용한다.',
+ ['Conv 1→8','AvgPool → 128','LIF × 8','rate → logits'],
+ 'I = flatten(pool(conv(X))); rate = Σs[t] / T',
+ 'digits','scnn','ImageSNN(convolution=True)',
+ '동일한 LIF cell 앞의 fully-connected encoder를 convolution으로 바꿉니다. 모든 층이 spiking인 모델은 아닙니다. encoder와 출력 head는 analog이며 교육용 hybrid입니다.',
+ 'snn과 scnn은 입력과 발화 rule이 같고 encoder가 다릅니다. cnn과 scnn은 구조까지 완전히 동일하지 않으므로 발화 하나의 순수 효과를 분리한 ablation으로 해석하지 마세요.',
+ '전압·spike·시간축과 공간축을 구분하세요. T=8 simulation steps는 recall 과제의 길이 32와 다른 의미입니다.'),
+('rnn','05 · Vanilla RNN','같은 계산 셀을 순서대로 반복하고 상태를 전달한다.',
+ None,'h[t] = tanh(Wx[t] + Uh[t−1] + b)',
+ 'recall','rnn','RecallRNN("RNN")',
+ '입력은 [B,T,10] one-hot. 첫 token은 0~7의 정답 기호, 중간은 무관한 기호, 마지막 8은 query입니다. 마지막 hidden state로 첫 token을 맞춥니다. 무작위 정답률은 12.5%입니다.',
+ 'length 8과 32를 각각 모든 모델로 비교하세요. train loss부터 감소하지 않으면 generalization 문제가 아니라 최적화/기억 전달에 실패한 것일 수 있습니다.',
+ '시간을 거슬러 gradient를 전달하는 BPTT에서 반복 곱 때문에 gradient가 작아지거나 커질 수 있습니다. clip_grad_norm_은 폭주를 줄이지만 장기 기억 소실을 해결하지는 않습니다.'),
+('srnn','06 · SRNN','막전압의 기억과 spike의 recurrent feedback을 결합한다.',
+ None,'I[t] = Wx[t] + Us[t−1]; (s[t],u[t]) = LIF(I[t],u[t−1])',
+ 'recall','srnn','SRNN',
+ '여기서는 48개의 LIF neuron과 학습 가능한 recurrent linear layer를 씁니다. 앞 시점의 spike가 다음 시점 전류에 영향을 줍니다. 최종 막전압을 analog head에 넣습니다. 샘플/배치 사이 상태를 이어 붙이지 않습니다.',
+ 'rnn과 동일 seed·길이·epoch로 비교하세요. leak=0.9인 전압에 첫 입력의 영향이 0.9^31≈0.038만 남는다는 점과 recurrent feedback이 이를 어떻게 바꿀 수 있는지 생각해 보세요.',
+ 'SRNN은 단일 표준 구조 이름이 아닙니다. LIF의 누설 기억과 LSTM의 학습된 gate는 다른 방식입니다. 이름이 유사하다고 동등한 표현력을 전제하지 마세요.'),
+('lstm','07 · LSTM','무엇을 기억하고 지울지 gate를 학습한다.',
+ None,'c[t] = f[t] ⊙ c[t−1] + i[t] ⊙ g[t]; h[t] = o[t] ⊙ tanh(c[t])',
+ 'recall','lstm','RecallRNN("LSTM")',
+ 'hidden h와 별도로 cell state c가 있습니다. forget/input/output gate는 sigmoid 출력입니다. additive cell 경로는 장기 gradient 흐름을 돕지만 모든 task에서 학습을 보장하지 않습니다. 구현은 검증된 nn.LSTM을 사용하며 구조는 위 수식으로 읽습니다.',
+ 'RNN과 length 8/32에서 accuracy 차이를 기록하세요. 15 epoch로 LSTM도 12.5% 근처에 멈추면 버그로 단정하지 말고, 학습 길이·초기화·budget의 영향을 검토하세요. tuning은 validation만 보고 진행합니다.',
+ '이 코드에는 이름만 바꾼 가짜 spiking LSTM을 넣지 않았습니다. SRNN과 비교해 고정 leak vs 학습 gate를 공부하세요. Spiking LSTM 연구 구조는 별도 논문별로 다릅니다.'),
+('gru','08 · GRU','더 적은 gate로 hidden state 갱신을 조절한다.',
+ ['x[t], h[t−1]','reset / update gate','candidate state','h[t] → head'],
+ 'h[t] = (1−z[t]) ⊙ n[t] + z[t] ⊙ h[t−1]  (PyTorch convention)',
+ 'recall','gru','RecallRNN("GRU")',
+ '별도 cell state 없이 update/reset gate를 사용합니다. 같은 hidden width에서도 LSTM과 parameter 수가 달라집니다. reset gate가 candidate 계산에 들어가는 세부 위치는 구현 convention에 따라 다릅니다.',
+ 'LSTM과 파라미터 수·학습 시간·정확도를 비교하세요. gate 수가 적다고 GPU wall time이 반드시 짧아지는 것은 아닙니다.',
+ '동일 epoch는 동일 FLOPs가 아닙니다. 현재 실험은 일정 데이터 노출 횟수에서 각 작은 구조가 얼마나 배우는지를 봅니다. GRU의 표준 1:1 spiking 모델을 가정하지 않습니다.'),
+('transformer','09 · Transformer encoder','마지막 query가 첫 위치에 직접 attention할 수 있다.',
+ ['embed + position','multi-head attention','residual + FFN','last token → 8'],
+ 'Attention(Q,K,V) = softmax(QKᵀ / √d) V',
+ 'recall','transformer','RecallAttention',
+ '32차원, head 4개, encoder block 2개입니다. nn.TransformerEncoderLayer는 self-attention, feed-forward, residual, layer normalization을 포함합니다. recall은 전체 입력을 보고 한 개를 분류하므로 causal mask가 필요하지 않습니다. 마지막 입력은 고정 query이고 첫 위치 정보를 attention으로 모을 수 있습니다.',
+ '고정 길이 recall DNN도 함께 비교하세요. DNN은 첫 위치에서 출력으로 직접 연결되므로 이 과제를 매우 쉽게 풀 수 있습니다. Transformer가 DNN보다 낫다는 증명이 아니라 접근 경로 차이를 보는 실험입니다.',
+ 'position 없이 permutation-equivariant한 attention만으로 첫 위치를 구분하기는 어렵습니다. 길이가 늘면 attention score의 T×T 저장량이 커집니다. 이 모델은 BERT pretraining이나 번역 encoder-decoder 전체 재현은 아닙니다.'),
+('spike_attention','10 · Spike attention toy','spike Q/K/V의 동시 활성으로 관련도를 만든다.',
+ ['analog embed + pos','spike Q / K / V','coincidence weights','analog residual/head'],
+ 'A = (S_Q S_Kᵀ)/√d; W = A / max(row_sum(A),1); H = LayerNorm(X + W S_V)',
+ 'recall','spike_attention','RecallAttention(spiking=True)',
+ 'hard spike forward와 surrogate backward를 사용합니다. softmax를 제거하고 row sum으로 정규화합니다. mask 없는 recall용 단일 attention이며, 별도의 다중 simulation time LIF 동역학은 없습니다.',
+ 'Transformer와 accuracy를 비교하되, depth·head·FFN 등 구조가 다르다는 점을 함께 기록하세요. 0/1 Q/K/V가 만드는 표현 제약과 아날로그 residual이 보완하는 역할을 읽어보세요.',
+ 'Spikformer 논문에서 영감을 얻은 교육용 hybrid일 뿐 논문 재현이 아닙니다. 에너지 효율이나 spiking Transformer 전체 구현으로 주장하지 않습니다. GPT의 spiking 대응도 이 실습에 포함되어 있지 않습니다.'),
+('lm_lstm','11 · LSTM language model','분류 하나 대신 모든 위치에서 다음 token을 예측한다.',
+ ['token IDs → embedding','causal recurrent LSTM','Linear → vocab 15','next-token CE'],
+ 'input = tokens[:-1]; target = tokens[1:]; PPL = exp(mean token CE)',
+ 'language','lstm','LanguageModel(kind="lstm")',
+ '15개의 word-level vocabulary로 만든 독립 문서들을 사용합니다. 예: <bos> the red cat runs . <eos>. teacher forcing에서는 정답 이전 token을 입력으로 줍니다. RNN은 순서상 미래를 보지 않습니다.',
+ 'checkpoint로 문장을 생성해 보세요. 학습 시에는 정답 prefix를 받지만 생성 시에는 자기 예측이 다음 입력이 됩니다. 이 차이 때문에 token accuracy가 높아도 문장이 틀릴 수 있습니다.',
+ 'random color/animal 선택은 이전 문맥으로 완전히 예측할 수 없습니다. 따라서 100% accuracy나 perplexity 1을 정상 목표로 두지 않습니다. 학습/검증/test 문서는 독립 생성되지만 같은 문법을 공유합니다.'),
+('gpt','12 · Tiny GPT-style Transformer','미래를 가린 self-attention으로 다음 token을 학습한다.',
+ ['token + position','causal attention ×2','vocab logits','sample → append'],
+ 'mask[i,j] = blocked if j > i; p(next) = softmax(logits_last)',
+ 'language','gpt','LanguageModel(kind="gpt")',
+ '48차원, head 4개, block 2개. PyTorch encoder block에 삼각 causal mask를 적용한 decoder-only 방식 toy입니다. GPT 제품의 규모나 정확한 내부 구조를 복제한 모델은 아닙니다. attention 행렬에서 오른쪽 위를 차단해야 target leakage가 없습니다.',
+ 'LSTM LM과 동일 group에서 token loss/PPL을 비교하고 같은 생성 시작 token으로 생성문을 봅니다. test에서는 정답 prefix 조건부 예측을 평가하며 자유 생성 전체 품질 점수는 아닙니다.',
+ '짧은 규칙 문장에서는 LSTM이 비슷하거나 더 좋을 수 있습니다. internet 지식, reasoning, instruction following은 이 데이터/크기의 학습 목표에 없습니다. pretraining 규모와 architecture 효과를 구분하세요.')]
+
+css='''*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#0c1421;color:#e6eefc;font:17px/1.75 system-ui,"Malgun Gothic",sans-serif}main{max-width:1120px;margin:auto;padding:45px 30px}h1{font-size:44px;line-height:1.2}h2{font-size:29px;line-height:1.4}h3{color:#77e4d7}p{max-width:950px}.tag{color:#7ee5d6;letter-spacing:.12em;font-size:13px}nav{display:flex;flex-wrap:wrap;gap:10px}a{color:#9cece3}nav a{background:#1b2c43;padding:7px 12px;border-radius:8px;text-decoration:none}section{margin:45px 0;background:#142236;padding:30px;border-radius:18px;border:1px solid #30425a;scroll-margin-top:20px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}.callout{border-left:4px solid #c2a1ff;padding:6px 20px;background:#1c2941}.equation,pre{background:#0a1422;padding:16px;border-radius:10px;overflow:auto;white-space:pre-wrap;font:15px/1.6 ui-monospace,Consolas,monospace}svg{width:100%;height:auto}table{border-collapse:collapse;width:100%}td,th{padding:10px;border-bottom:1px solid #3c506c;text-align:left}label{display:block}input{accent-color:#65dfd0}button{background:#68dfd0;color:#102234;border:0;padding:8px 15px;border-radius:7px;cursor:pointer}.small{color:#b3c4db;font-size:14px}.pixels{display:inline-grid;grid-template-columns:repeat(8,17px);gap:1px;padding:8px;background:#020611}.pixel{width:17px;height:17px}.mask{display:grid;grid-template-columns:repeat(8,32px);gap:4px}.mask span{height:32px;display:grid;place-content:center;font:12px monospace}.allowed{background:#25776e}.blocked{background:#482c48}.bar{height:12px;background:#69dfd0;border-radius:5px;margin:3px 0}@media(max-width:750px){.grid{grid-template-columns:1fr}h1{font-size:33px}main{padding:20px 12px}section{padding:18px}}@media print{body{background:white;color:#132238;font:11pt/1.5}section{background:white;break-inside:avoid;border:1px solid #bbb}nav,button,input{display:none}a,h3{color:#12635d}pre,.equation,.callout{background:#f1f5f8;color:#122}h1{font-size:30pt}svg text{fill:#123}svg rect{fill:#edf4f8}section{margin:15px 0;padding:15px}}'''
+out=['<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI 모델 발전 · 그림과 코드로 배우는 실습</title><style>'+css+'</style></head><body><main>',
+ '<div class="tag">G-M-Kim / LEARNING AI MODELS · OFFLINE FIELD GUIDE</div><h1>모델이 바뀌면<br>무엇이 달라질까?</h1><p>출력 정확도만 보지 말고 <b>입력을 어떻게 표현하고, 정보를 어디에 저장하며, 어떤 경로로 정답을 찾는지</b> 따라가 봅시다. 이 교재는 저장소의 실행 코드와 함께 읽습니다.</p>',
+ '<nav>'+''.join(f'<a href="#{c[0]}">{escape(c[1])}</a>' for c in chapters)+'</nav>',
+ '<section><h2>먼저 실험의 기준을 정하기</h2><div class="grid"><div><h3>공간 / 시간 / 다음 token</h3><p>이미지 모델은 동일 digits, 기억 모델은 동일 recall, 언어 모델은 동일 문법 데이터를 씁니다. 다른 과제의 90%와 60%를 순위로 비교하지 않습니다.</p><p>DNN은 큰 범주입니다. 이 실습에서는 MLP를 DNN으로 줄여 부릅니다. CNN/RNN/Transformer가 역사적으로 차례차례 사라진 것은 아닙니다.</p></div><div><h3>검증과 테스트의 역할</h3><p>Train: 가중치 갱신 → Validation: best epoch 선택 → Test: 최종 한 번 평가. 모델마다 test 결과를 보며 반복 조정하면 test가 사실상 validation으로 변합니다.</p><p>seed 42/43/44는 가중치·minibatch 순서의 변동입니다. 데이터 split은 고정합니다. 결과에서 평균과 표본 SD를 함께 봅니다.</p></div></div><div class="callout">교재의 도식은 원리 설명입니다. 실측 숫자는 <code>runs/comparison.html</code>과 <code>docs/EXPERIMENTS.md</code>에만 기록합니다. 스크린샷이나 그림의 모양을 학습 성능으로 해석하지 마세요.</div></section>']
+
+# Real bundled examples: rendered as pixels, not externally fetched images.
+x,y=datasets('digits')[2]
+out.append('<section><h2>입력은 실제로 이렇게 생겼습니다</h2><div class="grid"><div>')
+for i in range(3):
+    out.append(f'<div style="display:inline-block;margin:10px"><div>test sample · 정답 {int(y[i])}</div><div class="pixels">')
+    for value in x[i].flatten():
+        level=int(float(value)*255)
+        out.append(f'<span class="pixel" style="background:rgb({level},{level},{level})"></span>')
+    out.append('</div></div>')
+out.append('</div><div><h3>Recall</h3><pre>[3, 6, 2, 7, 0, 1, 4, 8] → target 3\n 마지막 8: 첫 기호를 물어보는 query\n 실제 tensor: [batch, length, 10] one-hot</pre><h3>Language shift</h3><pre>input : &lt;bos&gt; the red cat runs .\ntarget: the red cat runs . &lt;eos&gt;</pre></div></div></section>')
+for ident,title,subtitle,labels,equation,task,model,code,explain,experiment,limit in chapters:
+    visual=flow(labels) if labels else recurrence(ident=='lstm')
+    out += [f'<section id="{ident}"><div class="tag">{escape(task.upper())} · CODE ↔ CONCEPT</div><h2>{escape(title)}</h2><p>{escape(subtitle)}</p>{visual}',
+            f'<div class="equation">{escape(equation)}</div><p>{escape(explain)}</p>',
+            f'<div class="grid"><div><h3>실행하고 관찰하기</h3><pre>python -m ailab.run --task {task} --model {model} --epochs 15</pre><p>{escape(experiment)}</p></div><div><h3>코드에서 찾아보기</h3><p><code>ailab/models.py → {escape(code)}</code></p><p>{escape(limit)}</p></div></div>',
+            '<details><summary>스스로 설명해 보기</summary><p>입력과 출력 tensor shape는 무엇인가? 어떤 가중치가 공유되는가? 학습되는 값과 고정 상수는 무엇인가? 이전 모델보다 유리한 입력과 불리한 입력을 한 가지씩 말해 보세요.</p></details></section>']
+out += ['''<section id="lif"><h2>직접 조절하기 · LIF의 기억과 발화</h2><p>일정 전류가 들어올 때 leak과 simulation steps가 spike 수를 어떻게 바꾸는지 봅니다. 아래는 원리 설명이며 학습된 모델 출력이 아닙니다.</p><div class="grid"><div><label>입력 전류 I <input id="current" type="range" min="0" max="1.5" step=".05" value=".35"> <output id="currentValue"></output></label><label>기억 비율 β <input id="beta" type="range" min="0" max=".99" step=".01" value=".9"> <output id="betaValue"></output></label><p id="lifSummary"></p><p class="small">자주 발화하면 reset으로 전압이 떨어집니다. neuron state를 유지하는 시간과 batch 간 state reset을 구분하세요.</p></div><div><svg id="lifPlot" viewBox="0 0 550 220" role="img" aria-label="membrane voltage and spikes"></svg></div></div></section>
+<section><h2>직접 조절하기 · causal mask</h2><p>행은 현재 query, 열은 참조하는 key 위치입니다. 초록만 볼 수 있습니다. 다음 token 정답을 input에 몰래 포함하지 않도록 미래를 차단합니다.</p><div class="grid"><div><label><input id="causal" type="checkbox" checked> 미래 가리기 (GPT에서 필요)</label><p id="maskSummary"></p><p>Recall encoder는 전체 입력을 사용해 마지막 정답 하나를 분류하므로 이 mask를 사용하지 않습니다. 언어 모델은 mask를 없애면 token 예측 지표가 부당하게 좋아질 수 있습니다. 단순히 mask만 없애는 비교는 올바른 성능 개선 실험이 아닙니다.</p></div><div class="mask" id="mask"></div></div></section>
+<section><h2>측정값을 읽는 법</h2><table><tr><th>측정</th><th>뜻</th><th>주의</th></tr><tr><td>Accuracy</td><td>argmax가 정답인 비율</td><td>language는 token 단위; 문장 전체 정확도 아님</td></tr><tr><td>CE loss / PPL</td><td>정답에 확률을 얼마나 주는가 / exp(CE)</td><td>같은 vocabulary·test token에서만 PPL 비교</td></tr><tr><td>Parameters</td><td>학습 가능한 수의 개수</td><td>FLOPs나 GPU 시간과 동일하지 않음</td></tr><tr><td>Training seconds</td><td>train+validation+checkpoint 저장 시간</td><td>GPU warm-up, driver, 다른 프로세스 영향</td></tr><tr><td>Peak CUDA allocated MB</td><td>PyTorch tensor peak allocation</td><td>nvidia-smi 전체 VRAM 또는 에너지 아님</td></tr></table><p>Train loss만 낮고 val loss가 오르면 overfitting을 의심합니다. 둘 다 높으면 학습 budget·표현력·최적화를 봅니다. val loss가 내려가도 accuracy는 계단처럼 움직일 수 있습니다.</p><p>데이터 hash, epoch, lr, batch, 길이, 주요 software/hardware가 같은 실행끼리 group을 만듭니다. 코드를 직접 바꾸면 반드시 별도 output 경로와 git commit을 남기세요. 자동 group은 data.py/models.py/run.py의 코드 hash도 기록합니다.</p></section>
+<section><h2>내 실험 노트</h2><p>모델마다 다음 여섯 가지를 적으면 결과 숫자가 학습 경험으로 바뀝니다.</p><ol><li>입력·출력 shape와 정보가 정답까지 가는 경로를 그리기.</li><li>실행 명령·commit·seed·길이를 적기.</li><li>같은 group에서 test accuracy/PPL, params, 시간, 메모리 기록.</li><li>예상한 결과와 다른 점 하나 고르기.</li><li>왜 그런지 가설을 세우고 validation으로 한 변수만 바꾸기.</li><li>학습한 모델로 held-out 예측 또는 생성문을 확인하기.</li></ol><p><code>python -m ailab.predict --checkpoint runs/실제폴더/best.pt</code></p></section>
+<section><h2>다음 단계와 참고 자료</h2><p>현재 실습은 핵심 구조를 직접 실행하는 첫 과정입니다. 대규모 데이터, Seq2Seq 번역, BERT의 masked-language modeling, 실제 spiking Transformer 논문 재현, pretrained model fine-tuning은 후속 과제입니다. 단순 이름 바꾸기로 같은 모델이라고 하지 않습니다.</p><ul>
+<li><a href="https://pytorch.org/get-started/previous-versions/">PyTorch · 고정 버전 GPU wheel 설치</a></li>
+<li><a href="https://docs.pytorch.org/docs/stable/generated/torch.nn.LSTM.html">PyTorch · LSTM gate 및 API</a></li>
+<li><a href="https://docs.pytorch.org/docs/stable/generated/torch.nn.TransformerEncoderLayer.html">PyTorch · Transformer encoder layer</a></li>
+<li><a href="https://bioinf.jku.at/software/lstm/">Hochreiter &amp; Schmidhuber · Long Short-Term Memory (1997)</a></li>
+<li><a href="https://arxiv.org/abs/1706.03762">Vaswani et al. · Attention Is All You Need (2017)</a></li>
+<li><a href="https://snntorch.readthedocs.io/en/latest/snntorch.surrogate.html">snnTorch · Surrogate gradients</a></li>
+<li><a href="https://snntorch.readthedocs.io/en/latest/snn.neurons_rleaky.html">snnTorch · Recurrent Leaky neuron</a></li>
+<li><a href="https://arxiv.org/abs/2209.15425">Zhou et al. · Spikformer (2022), 本実習は再現実装ではありません</a></li>
+<li><a href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html">scikit-learn · Digits data</a></li></ul><button onclick="window.print()">인쇄 / PDF로 저장</button><p class="small">브라우저의 인쇄 기능으로 PDF 저장 가능. 슬라이더와 그래프는 HTML에서 작동합니다.</p></section>
+</main><script>
+function lifDraw(){const I=Number(document.getElementById('current').value),b=Number(document.getElementById('beta').value);document.getElementById('currentValue').textContent=I.toFixed(2);document.getElementById('betaValue').textContent=b.toFixed(2);let u=0,spikes=0,pts=[],marks=[];for(let t=0;t<32;t++){u=b*u+I;const s=u>1?1:0;spikes+=s;u-=s;const x=25+t*16;pts.push(x+','+(180-u*85));if(s)marks.push('<line x1="'+x+'" y1="25" x2="'+x+'" y2="55" stroke="#c0a0ff" stroke-width="3"/>');}document.getElementById('lifPlot').innerHTML='<path d="M20 95H535" stroke="#657995" stroke-dasharray="4 4"/><text x="25" y="90" fill="#aabbd4" font-size="12">threshold 1 (post-reset voltage shown)</text><polyline points="'+pts.join(' ')+'" fill="none" stroke="#6de0d2" stroke-width="3"/>'+marks.join('')+'<text x="25" y="210" fill="#6de0d2">막전압 (reset 후)</text><text x="260" y="210" fill="#c0a0ff">spike</text>';document.getElementById('lifSummary').textContent='32 step 동안 '+spikes+'회 발화 · spike rate '+(spikes/32).toFixed(3);}
+function maskDraw(){const causal=document.getElementById('causal').checked;let cells=[];for(let i=0;i<8;i++)for(let j=0;j<8;j++){const blocked=causal&&j>i;cells.push('<span class="'+(blocked?'blocked':'allowed')+'" title="query '+i+', key '+j+'">'+(blocked?'×':'●')+'</span>');}document.getElementById('mask').innerHTML=cells.join('');document.getElementById('maskSummary').textContent=causal?'현재 위치까지 참조: 올바른 autoregressive 학습':'미래 참조 가능: next-token 학습에서 정답 누출 위험';}
+['current','beta'].forEach(id=>document.getElementById(id).addEventListener('input',lifDraw));document.getElementById('causal').addEventListener('change',maskDraw);lifDraw();maskDraw();
+</script></body></html>''']
+text='\n'.join(out).replace('本実習は再現実装ではありません','이 실습은 논문 재현이 아닙니다')
+(ROOT/'docs/study.html').write_text(text,encoding='utf-8')
+print('Wrote docs/study.html')

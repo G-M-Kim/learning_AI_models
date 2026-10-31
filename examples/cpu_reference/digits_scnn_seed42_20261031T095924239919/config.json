@@ -1,0 +1,21 @@
+{
+  "task": "digits",
+  "model": "scnn",
+  "epochs": 15,
+  "batch_size": 64,
+  "lr": 0.001,
+  "length": 32,
+  "seed": 42,
+  "device": "cpu",
+  "quick": false,
+  "output": "runs",
+  "source_sha256": "83c8fed10ac32085a76ef685c959a133d9991bc0210ae02f26f88931accd6cc7",
+  "numpy": "2.2.6",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.39",
+  "data_sha256": "580208e414c0c018894199489b3e43b0e8aa897a21077d37500b7998d539c2e8",
+  "torch": "2.7.1+cpu",
+  "sklearn": "1.6.1",
+  "python": "3.12.14",
+  "device_name": "x86_64",
+  "comparison_group": "4af3c412495a4209"
+}
