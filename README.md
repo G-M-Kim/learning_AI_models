@@ -2,6 +2,8 @@
 
 **코드를 읽고 → 작은 모델을 학습하고 → 같은 test set에서 결과를 비교하는 한국어 실습.** Windows 11 / RTX 4070 Ti / Python 3.11 / PyTorch 2.7.1 CUDA 12.6을 기준으로 합니다. API 키가 필요하지 않습니다.
 
+**새 인터랙티브 교재:** [Convolution Lab — 신호및시스템에서 CNN까지](docs/convolution.html). 1D 합성곱의 필터 반전·상호상관 비교, 2D 3×3 커널 편집, feature map 계산, im2col/GEMM, 국소 연결·가중치 공유를 브라우저에서 직접 실험할 수 있습니다. 파일을 다운로드해 열면 인터넷 없이 실행됩니다.
+
 처음 사용하는 PC라면 **[설치부터 실행까지](docs/SETUP_WINDOWS.md)** 를 먼저 따라 하세요. 시각화 교재 **[docs/study.html](docs/study.html)** 은 내려받은 뒤 브라우저로 열어야 렌더링됩니다. 외부 CDN 없이 오프라인에서 작동합니다.
 
 ## 권장 학습 순서
