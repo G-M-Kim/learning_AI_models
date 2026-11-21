@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Convolution Lab — 신호및시스템에서 CNN까지</title>
+<style>
+:root{color-scheme:dark;--bg:#09131f;--panel:#122235;--panel2:#182c43;--line:#2b4359;--text:#edf5ff;--muted:#aebfd2;--accent:#61d9cb;--blue:#68aaff;--orange:#ffc177;--rose:#ff928f}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 90% 0%,#14334a 0%,transparent 42%),var(--bg);color:var(--text);font:16px/1.7 system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif}main{max-width:1180px;margin:auto;padding:30px 24px 90px}h1{font-size:clamp(32px,4.5vw,57px);line-height:1.19;margin:12px 0 18px;letter-spacing:-.035em}h2{font-size:clamp(23px,3vw,31px);line-height:1.3;margin:0 0 14px}h3{font-size:19px;margin:12px 0 8px}p{margin:9px 0 15px}.eyebrow{color:var(--accent);font-size:13px;letter-spacing:.12em;font-weight:800}.lead{font-size:19px;color:#d0e2f5;max-width:890px}.hero{padding:38px 0 24px}.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted);font-size:13px;margin:6px 8px 2px 0}.nav{display:flex;flex-wrap:wrap;gap:9px;margin-top:25px}a{color:#92f0df}.nav a{padding:7px 12px;color:var(--text);text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:14px}a:hover,.nav a:hover{color:var(--accent)}section{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:30px;margin-top:27px;scroll-margin-top:20px}.prose{max-width:980px;color:#d0dfef}.callout{background:#102b36;border:1px solid #28675f;border-radius:12px;padding:15px 19px;margin:18px 0}.warning{background:#342923;border-color:#79573a}.split{display:grid;grid-template-columns:1fr 1fr;gap:22px}.triple{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.75fr) minmax(0,.9fr);gap:16px}.panel{background:#0c1b2a;border:1px solid #294157;border-radius:13px;padding:18px;min-width:0}.muted,.hint{color:var(--muted)}.hint{font-size:13px}.formula{font:15px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;background:#071421;border-radius:9px;padding:12px;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere}.controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:17px 0}.controls label{font-size:14px;color:var(--muted)}button,select,input[type=number]{font:inherit}button,select{border-radius:9px;padding:9px 13px;cursor:pointer}button{background:#1c3a50;border:1px solid #41617a;color:var(--text)}button:hover{background:#27536b}button.primary{background:#1b7068;border-color:#2c9e91;font-weight:750}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}button:disabled{opacity:.4;cursor:not-allowed}select,input[type=number]{background:#081827;border:1px solid #426078;color:var(--text)}input[type=range]{width:min(100%,280px);accent-color:var(--accent);vertical-align:middle}.graph{width:100%;height:auto;min-height:160px;border-radius:10px;background:#081725}.graph text{fill:#b8cbdd;font:11px system-ui}.graph .spike{stroke:#69d9cc;stroke-width:4}.graph .inactive{stroke:#58708a;stroke-width:3}.graph .negative{stroke:#ff9b8f}.graph .selected{stroke:#ffbc72}.window{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.window .chip{padding:8px 10px;border:1px solid #39536b;background:#172f46;border-radius:8px;font:13px/1.5 ui-monospace,Consolas,monospace}.chip b{color:var(--orange)}.stat{font-size:29px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}.gridbox{display:grid;gap:3px;max-width:100%;width:max-content;margin:12px auto}.cell{display:grid;place-items:center;width:39px;height:39px;border:1px solid #344a60;border-radius:5px;font:14px ui-monospace,Consolas,monospace;color:#ecf7ff;background:#1d374e;transition:background .12s,border-color .12s}.cell.active{border:2px solid var(--orange)}.cell.chosen{outline:2px solid var(--accent);outline-offset:0}.cell.editable{cursor:pointer}.cell.editable:hover{border-color:var(--accent)}.matrix{font-size:13px;text-align:center}.kernel-input{width:58px;padding:8px 4px;border-radius:6px;text-align:center;font:14px ui-monospace,Consolas,monospace}.kernelgrid{display:grid;grid-template-columns:repeat(3,58px);gap:6px;justify-content:center;margin:12px auto}.caption{color:var(--muted);text-align:center;font-size:12px;margin:5px}.metricpair{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.metric{border:1px solid var(--line);border-radius:12px;background:#091b2b;padding:16px}.metric strong{display:block;color:var(--orange);font-size:clamp(19px,2.5vw,29px);line-height:1.5}.metric span{font-size:13px;color:var(--muted)}.barline{height:12px;border-radius:30px;background:#18344b;overflow:hidden;margin-top:7px}.barline>div{background:#60d9cd;height:100%;transition:width .15s}.math-table{border-collapse:collapse;width:100%;font-size:14px}.math-table th,.math-table td{border-bottom:1px solid #344c65;padding:9px;text-align:left;vertical-align:top}.math-table th{color:var(--accent)}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:13px}.steps>div{background:#102a3b;border:1px solid #2c4b5a;padding:16px;border-radius:11px}.steps b{color:var(--accent)}.quiz button{display:block;width:100%;text-align:left;margin-top:9px}.ok{color:#66e0bf}.err{color:#ffb5a0}.badge{padding:2px 7px;border-radius:5px;background:#294354;color:var(--muted);font-size:12px}.output-details{font-size:13px}.output-details strong{color:var(--accent)}.tiny{font-size:12px;color:var(--muted)}.code{font-family:ui-monospace,Consolas,monospace;color:#ffce9e}.stack{display:grid;gap:12px}.input-actions{justify-content:center}footer{color:var(--muted);font-size:13px;margin-top:25px}@media(max-width:930px){.triple{grid-template-columns:1fr 1fr}.triple>.panel:last-child{grid-column:1/-1}.metricpair{grid-template-columns:1fr 1fr}}@media(max-width:640px){main{padding:17px 11px 60px}section{padding:17px 12px}.split,.triple,.steps{grid-template-columns:1fr}.triple>.panel:last-child{grid-column:auto}.cell{width:35px;height:35px;font-size:12px}.metricpair{grid-template-columns:1fr 1fr}.panel{padding:12px}.formula{font-size:12px}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+</style>
+</head>
+<body><main>
+<header class="hero">
+<div class="eyebrow">LEARNING AI MODELS / INTERACTIVE LAB 02</div>
+<h1>Convolution:<br>적분에서 CNN까지</h1>
+<p class="lead">신호및시스템 시간에 배운 <b>필터 뒤집기 → 이동 → 곱해서 적분</b>이 왜 이미지의 작은 숫자 행렬 연산으로 보일까? 직접 움직여 보고, 커널 값을 바꿔 보면서 이해하는 오프라인 교재입니다.</p>
+<span class="pill">HTML 하나로 실행</span><span class="pill">외부 라이브러리 없음</span><span class="pill">수식·숫자·시각화 동기화</span>
+<nav class="nav" aria-label="교재 목차"><a href="#one">01 · 1D 합성곱</a><a href="#two">02 · 2D CNN</a><a href="#three">03 · 왜 중요한가</a><a href="#four">04 · GEMM과 RTL 관점</a><a href="#check">05 · 이해도 확인</a></nav>
+</header>
+
+<section id="one">
+<div class="eyebrow">01 / SIGNALS &amp; SYSTEMS</div>
+<h2>기억하는 그 합성곱이 맞다</h2>
+<p class="prose">연속시간에서 <b>y(t) = ∫ x(τ) h(t−τ) dτ</b>. 디지털 신호에선 적분이 합산으로 바뀝니다. <b>y[n] = Σ x[k] h[n−k]</b>. 뒤집는 이유는 <span class="code">h[n−k]</span>에서 k가 증가할 때 필터를 역방향으로 조회하기 때문입니다.</p>
+<div class="formula">연속시간: y(t) = ∫ x(τ) · h(t − τ) dτ
+이산시간: y[n] = Σ(k) x[k] · h[n − k]</div>
+<div class="controls">
+<label>입력 신호
+<select id="signal"><option value="pulse">비대칭 펄스</option><option value="impulse">임펄스</option><option value="step">계단</option></select></label>
+<label>필터
+<select id="tap"><option value="asym">[1, 2, -1] (비대칭)</option><option value="smooth">[1, 2, 1] (대칭)</option><option value="difference">[1, -1, 0] (차분)</option></select></label>
+<label>연산
+<select id="mode"><option value="conv">Convolution (뒤집음)</option><option value="corr">Cross-correlation (안 뒤집음)</option></select></label>
+</div>
+<div class="split">
+<div class="panel">
+<h3>① 신호와 필터를 움직이기</h3>
+<svg class="graph" id="signalSvg" viewBox="0 0 540 185" role="img" aria-label="1차원 입력 신호 그래프, 커널 겹침 표시"></svg>
+<div class="controls"><label for="offset">정렬 위치 n = <b id="offsetVal">0</b></label><input id="offset" type="range" min="0" max="10" value="4"><button id="prev" aria-label="한 단계 뒤로">◀</button><button id="next" aria-label="한 단계 앞으로">▶</button><button class="primary" id="play">자동 재생</button></div>
+<div class="hint">주황색: 현재 커널과 겹친 입력. 범위를 벗어난 입력은 0으로 간주합니다. 필터의 오른쪽 끝이 n에 정렬된 표현입니다.</div>
+</div>
+<div class="panel">
+<h3>② 곱하고 더한 값 확인</h3>
+<div class="hint" id="kernelLabel"></div>
+<div class="window" id="terms"></div>
+<div class="formula" id="sumFormula" aria-live="polite"></div>
+<div class="hint">현재 출력 y[n]</div><div class="stat" id="currentOutput" aria-live="polite">0</div>
+</div>
+</div>
+<div class="panel" style="margin-top:14px">
+<h3>③ 모든 위치의 출력을 모으면 새로운 신호</h3><svg class="graph" id="outputSvg" viewBox="0 0 540 160" role="img" aria-label="계산된 출력 신호 그래프"></svg>
+</div>
+<div class="callout warning"><b>왜 Cross-correlation도 Convolution이라고 부르지?</b><br>CNN 라이브러리의 <span class="code">Conv2d</span>는 보통 필터를 뒤집지 않는 Cross-correlation을 수행합니다. 그러나 필터 값 자체가 학습되므로, 참된 합성곱으로 얻을 수 있는 필터도 계수를 반대로 배치하면 표현할 수 있습니다. 위에서 비대칭 필터를 선택하고 두 연산을 전환해 보세요. 대칭 필터로는 차이가 잘 보이지 않습니다.</div>
+</section>
+
+<section id="two">
+<div class="eyebrow">02 / FROM 1D TO 2D</div>
+<h2>이미지의 숫자 행렬도 결국 같은 원리</h2>
+<p class="prose">이미지는 격자 형태의 이산 신호입니다. 커널 3×3을 겹치고, 같은 위치끼리 9번 곱한 뒤 더합니다. <b>아래에서 출력 칸을 누르면 대응하는 입력 3×3 영역이 강조</b>됩니다. 입력 칸은 클릭하여 0 → 1 → 2 → 0으로 편집할 수 있습니다.</p>
+<div class="formula">CNN에서 흔한 연산 (상호상관):
+Y[i,j] = Σ(u=0..2) Σ(v=0..2) X[i+u,j+v] · K[u,v]
+예제: 7×7 입력, 3×3 커널, stride=1, padding=0, bias=0 → 5×5 출력</div>
+<div class="controls">
+<label>이미지 패턴 <select id="pattern"><option value="edge">수직 경계</option><option value="cross">십자 모양</option><option value="l">L 모양</option><option value="grad">좌우 그라데이션</option></select></label>
+<label>필터 프리셋 <select id="preset"><option value="identity">중앙값만 (Identity)</option><option value="vertical">수직 경계 검출</option><option value="horizontal">수평 경계 검출</option><option value="blur">평균 흐림 (1/9)</option><option value="sharpen">선명화 (Sharpen)</option><option value="custom">직접 수정</option></select></label>
+<button id="shift" title="이미지를 오른쪽으로 한 칸 이동">입력 → 한 칸 이동</button><button id="resetInput">입력 초기화</button>
+</div>
+<div class="triple">
+<div class="panel">
+<h3>입력 X <span class="badge">7×7</span></h3>
+<div class="gridbox" id="imageGrid" aria-label="입력 이미지 셀, 클릭하면 값 변경"></div>
+<div class="caption">셀을 클릭해 값을 편집</div>
+</div>
+<div class="panel">
+<h3>학습할 커널 K <span class="badge">3×3</span></h3>
+<div class="kernelgrid" id="kernelGrid"></div>
+<div class="caption">계수를 직접 수정해 보세요</div>
+<div class="callout" style="padding:12px;font-size:13px">학습 중에는 이 9개 숫자가 <b>가중치(parameter)</b>입니다. 역전파로 갱신되며, 이미지의 모든 위치에서 <b>같은 9개</b>가 사용됩니다.</div>
+</div>
+<div class="panel">
+<h3>출력 Y <span class="badge">5×5</span></h3>
+<div class="gridbox" id="resultGrid" aria-label="출력 feature map, 클릭하면 연산 영역 선택"></div>
+<div class="caption">칸 클릭 → 해당 receptive field 표시</div>
+</div>
+</div>
+<div class="panel" style="margin-top:14px">
+<h3>선택 위치의 9회 MAC 계산</h3>
+<div class="hint" id="patchLabel">Y[0,0]</div>
+<div class="gridbox" id="productsGrid"></div>
+<div class="formula" id="patchFormula"></div>
+<div class="output-details" id="patchExplain"></div>
+</div>
+<div class="callout"><b>작은 커널로 무엇을 검출하는가?</b><br><b>Identity</b>는 입력 패치의 중앙값을 가져옵니다. <b>경계 검출</b>은 좌우 또는 상하의 픽셀 차이에 반응합니다. <b>Blur</b>는 이웃값을 평균 내며, <b>Sharpen</b>은 주변값을 빼 중앙값과의 대비를 높입니다. 실제 CNN은 이러한 커널을 사람이 지정하는 대신 데이터에서 학습합니다.</div>
+</section>
+
+<section id="three">
+<div class="eyebrow">03 / WHY CNN WORKS</div>
+<h2>중요한 건 '곱셈'보다 연결 구조다</h2>
+<p class="prose">CNN이 획기적이었던 이유는 이미지의 <b>국소성(locality)</b>을 이용하고, 위치가 바뀌어도 <b>같은 특징 검출기</b>를 재사용했기 때문입니다. 이를 Local Receptive Field, Weight Sharing이라고 합니다.</p>
+<div class="metricpair">
+<div class="metric"><span>28×28 입력 전체 연결 → 26×26 출력</span><strong>529,984</strong><span>Dense weight 개수 (bias 제외)</span><div class="barline"><div style="width:100%"></div></div></div>
+<div class="metric"><span>3×3 국소 연결, 위치마다 개별 가중치</span><strong>6,084</strong><span>연결 수 = 676 위치 × 9</span><div class="barline"><div style="width:1.15%"></div></div></div>
+<div class="metric"><span>3×3 Convolution, 가중치 공유</span><strong>9</strong><span>학습 파라미터 = 9 (단일 채널·필터)</span><div class="barline"><div style="width:.3%;min-width:4px"></div></div></div>
+</div>
+<p class="hint">세 수치는 <b>파라미터 수 비교</b>입니다. 각 층은 동일한 26×26 출력을 만든다고 가정하며 bias는 제외합니다. Conv의 MAC 수는 676×9 = 6,084로, 학습 가중치가 9개라는 뜻과 다릅니다. 마지막 막대는 가독성을 위한 최소 폭이 적용되었습니다.</p>
+<div class="steps">
+<div><b>1 · Locality</b><p>3×3 커널이 가까운 9개 픽셀을 먼저 관찰합니다. 공간 패턴을 학습하는 데 유리한 가정입니다.</p></div>
+<div><b>2 · Weight Sharing</b><p>같은 9개 가중치를 676곳에 적용합니다. 파라미터 수를 줄이고 여러 위치에서 비슷한 특징을 찾습니다.</p></div>
+<div><b>3 · Hierarchy</b><p>여러 Conv 층을 쌓으면 낮은 층의 선·모서리 특징이 높은 층의 복잡한 표현으로 결합될 수 있습니다.</p></div>
+</div>
+<div class="callout warning"><b>한계도 있습니다.</b><br>Convolution의 기본 성질은 <b>translation equivariance</b>(입력을 이동하면 출력 특징도 대응해 이동)이지, 위치 변화에 완전히 무관한 <b>invariance</b>가 아닙니다. 경계, 패딩, stride, pooling, 비선형 연산에 따라 성질이 달라집니다. 또한 모든 데이터가 국소적인 이미지는 아니므로 CNN이 모든 AI의 핵심 구조는 아닙니다. 현대 생성형 LLM은 주로 Transformer의 Attention과 FFN을 사용합니다.</div>
+</section>
+
+<section id="four">
+<div class="eyebrow">04 / MATRIX MULTIPLICATION &amp; HARDWARE</div>
+<h2>그럼 왜 GPU에서는 행렬곱으로 실행하지?</h2>
+<p>이름의 유래는 <b>이동하며 겹쳐서 누산하는 수학적 연산</b>이고, GEMM은 <b>그 연산을 구현하는 방법 중 하나</b>입니다. 전용 convolution 커널이나 Winograd 등 다른 구현도 가능합니다.</p>
+<div class="split">
+<div class="panel"><h3>직접 계산 (Direct Convolution)</h3><div class="formula">for i in range(5):
+  for j in range(5):
+    acc = 0
+    for u in range(3):
+      for v in range(3):
+        acc += X[i+u,j+v] * K[u,v]
+    Y[i,j] = acc</div><p class="hint">현재 학습 페이지의 7×7/3×3 예제를 그대로 코드로 표현했습니다.</p></div>
+<div class="panel"><h3>im2col + GEMM</h3><div class="formula">X: 7×7
+3×3 패치 25개 추출
+P = im2col(X) : [25, 9]
+w = flatten(K): [9, 1]
+y = P @ w     : [25, 1]
+reshape(y)     : [5, 5]</div><p class="hint">패치 하나가 행렬 P의 한 행입니다. 행 하나와 커널 벡터의 내적이 출력 한 칸입니다.</p></div>
+</div>
+<div class="panel" style="margin-top:14px">
+<h3>선택된 패치를 펼치면?</h3><div class="formula" id="im2colVector"></div>
+<p class="hint">출력의 다른 칸을 클릭하면 이 벡터도 달라집니다. 커널 벡터는 그대로입니다. 모든 패치를 모아 행렬로 만들면 큰 행렬곱 한 번으로 여러 위치를 처리할 수 있습니다.</p>
+</div>
+<table class="math-table" style="margin-top:18px">
+<thead><tr><th>관점</th><th>핵심</th></tr></thead><tbody>
+<tr><td>수학</td><td>슬라이딩 위치마다 원소별 곱을 합산 (sum of products)</td></tr>
+<tr><td>알고리즘</td><td>국소 연결 + 가중치 공유 + 특징 지도 생성</td></tr>
+<tr><td>GPU/NPU</td><td>MAC 배열·행렬곱 활용, 데이터 재사용, 메모리 이동 최소화</td></tr>
+<tr><td>RTL 관점</td><td>라인 버퍼, 윈도우 생성, 곱셈기/누산기, partial-sum 데이터플로</td></tr>
+</tbody></table>
+<p class="hint">실제 Conv2d는 입력과 출력 채널, stride, padding, dilation, batch, bias 등을 추가로 가집니다. 3×3 예제는 공간 연산을 이해하기 위해 단일 채널과 단일 필터로 단순화했습니다.</p>
+</section>
+
+<section id="check" class="quiz">
+<div class="eyebrow">05 / QUICK CHECK</div><h2>직접 확인해 봅시다</h2>
+<p>딥러닝 프레임워크에서 사용하는 Conv2d의 동작과 가장 가까운 설명은?</p>
+<button data-answer="0">A · 3×3 커널을 반드시 뒤집고 매 위치마다 적분한다.</button>
+<button data-answer="1">B · 커널을 각 위치에 슬라이딩하며 대응 원소를 곱해 합산하고, 계수는 모든 위치에 공유한다.</button>
+<button data-answer="2">C · CNN의 핵심은 모든 입력 픽셀을 모든 출력 픽셀에 연결하는 것이다.</button>
+<div id="quizResult" class="callout" aria-live="polite">선택지를 눌러 정답과 이유를 확인하세요.</div>
+<p class="hint">원리 복습: <a href="#one">1D 뒤집기</a> → <a href="#two">2D 커널</a> → <a href="#four">행렬곱 변환</a></p>
+</section>
+<footer>학습용 오프라인 시뮬레이션 · 수치는 브라우저에서 직접 계산하며 실제 학습 결과나 GPU 성능 측정값이 아닙니다. <a href="../README.md">레포지토리 README</a> · <a href="study.html">기존 모델 교재</a></footer>
+</main>
+<script>
+(function(){
+"use strict";
+function byId(id){return document.getElementById(id);}
+function el(tag,cls,text){var node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=String(text);return node;}
+function fmt(x){var n=Math.abs(x)<1e-10?0:x;return Number(n.toFixed(3)).toString();}
+function svgEl(tag,attrs){var e=document.createElementNS("http://www.w3.org/2000/svg",tag);Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});return e;}
+function svgText(svg,x,y,s,anchor){var t=svgEl("text",{x:x,y:y,"text-anchor":anchor||"middle"});t.textContent=String(s);svg.appendChild(t);}
+var signals={pulse:[0,1,2,3,2,1,0],impulse:[0,0,0,3,0,0,0],step:[0,0,1,1,1,1,1]},taps={asym:[1,2,-1],smooth:[1,2,1],difference:[1,-1,0]};
+var n=4,timer=null;
+function state1(){return {x:signals[byId("signal").value],h:taps[byId("tap").value],mode:byId("mode").value};}
+function compute1(s,n0){
+ var terms=[],sum=0,m=s.h.length;
+ for(var j=0;j<m;j++){
+  var k=n0-(m-1)+j, xv=(k>=0&&k<s.x.length)?s.x[k]:0;
+  var index=s.mode==="conv"?(m-1-j):j, hv=s.h[index],p=xv*hv;
+  terms.push({k:k,x:xv,h:hv,p:p});sum+=p;
+ }
+ return {terms:terms,sum:sum};
+}
+function drawStems(svg,values,sel,highlight){svg.replaceChildren();var w=540,base=107,step=(w-65)/Math.max(1,values.length-1);
+ svg.appendChild(svgEl("line",{x1:32,y1:base,x2:520,y2:base,stroke:"#58738a","stroke-width":1}));
+ values.forEach(function(v,i){var x=32+i*step,delta=Math.max(-56,Math.min(56,v*17)),active=highlight&&highlight.indexOf(i)!==-1,stroke=(i===sel)?"#ffbc72":active?"#60d9ca":"#6a86a4";
+  svg.appendChild(svgEl("line",{x1:x,y1:base,x2:x,y2:base-delta,stroke:stroke,"stroke-width":active||i===sel?5:3,"stroke-linecap":"round"}));
+  svg.appendChild(svgEl("circle",{cx:x,cy:base-delta,r:3,fill:stroke}));
+  svgText(svg,x,base+19,i);svgText(svg,x,base-delta+(delta>=0?-9:14),fmt(v));
+ });}
+function render1(){
+ var s=state1(),max=s.x.length+s.h.length-2;if(n>max)n=max;byId("offset").max=max;byId("offset").value=n;byId("offsetVal").textContent=n;
+ var item=compute1(s,n),overlap=item.terms.map(function(t){return t.k;}).filter(function(k){return k>=0&&k<s.x.length;});
+ drawStems(byId("signalSvg"),s.x,null,overlap);
+ byId("kernelLabel").textContent=(s.mode==="conv"?"뒤집어 적용하는 순서":"뒤집지 않은 순서")+" = ["+item.terms.map(function(t){return fmt(t.h);}).join(", ")+"]";
+ byId("terms").replaceChildren();item.terms.forEach(function(t){var box=el("span","chip");box.appendChild(el("span","", "x["+t.k+"] = "+fmt(t.x)+" × h = "+fmt(t.h)+" → "));box.appendChild(el("b","",fmt(t.p)));byId("terms").appendChild(box);});
+ byId("sumFormula").textContent="y["+n+"] = "+item.terms.map(function(t){return "("+fmt(t.x)+" × "+fmt(t.h)+")";}).join(" + ")+" = "+fmt(item.sum);
+ byId("currentOutput").textContent=fmt(item.sum);
+ var out=[];for(var i=0;i<=max;i++)out.push(compute1(s,i).sum);drawStems(byId("outputSvg"),out,n,null);
+}
+function stop(){if(timer!==null){clearInterval(timer);timer=null;}byId("play").textContent="자동 재생";}
+["signal","tap","mode"].forEach(function(id){byId(id).addEventListener("change",function(){stop();render1();});});
+byId("offset").addEventListener("input",function(e){stop();n=Number(e.target.value);render1();});
+byId("prev").addEventListener("click",function(){stop();n=Math.max(0,n-1);render1();});
+byId("next").addEventListener("click",function(){stop();n=Math.min(Number(byId("offset").max),n+1);render1();});
+byId("play").addEventListener("click",function(){if(timer!==null){stop();return;}byId("play").textContent="정지";timer=setInterval(function(){n=(n+1)%(Number(byId("offset").max)+1);render1();},650);});
+render1();
+
+var PRESETS={identity:[[0,0,0],[0,1,0],[0,0,0]],vertical:[[1,0,-1],[1,0,-1],[1,0,-1]],horizontal:[[1,1,1],[0,0,0],[-1,-1,-1]],blur:[[1/9,1/9,1/9],[1/9,1/9,1/9],[1/9,1/9,1/9]],sharpen:[[0,-1,0],[-1,5,-1],[0,-1,0]]};
+var grid=[],kernel=[],selected=[1,1];
+function makePattern(name){
+ var g=Array.from({length:7},function(){return Array(7).fill(0);});
+ for(var r=0;r<7;r++)for(var c=0;c<7;c++){
+  if(name==="edge")g[r][c]=c>=3?2:0;
+  if(name==="cross")g[r][c]=(r===3||c===3)?2:0;
+  if(name==="l")g[r][c]=(c===1&&r>=1&&r<=5)||(r===5&&c>=1&&c<=5)?2:0;
+  if(name==="grad")g[r][c]=c/3;
+ }return g;
+}
+function calc2(i,j){var sum=0;for(var u=0;u<3;u++)for(var v=0;v<3;v++)sum+=grid[i+u][j+v]*kernel[u][v];return sum;}
+function output2(){return Array.from({length:5},function(_,i){return Array.from({length:5},function(_,j){return calc2(i,j);});});}
+function paintInput(v){var alpha=Math.min(1,Math.max(0,v/2));var low=Math.round(28+alpha*52),green=Math.round(49+alpha*124),blue=Math.round(69+alpha*139);return "rgb("+low+","+green+","+blue+")";}
+function paintOutput(v,scale){var a=Math.max(.10,Math.min(.95,Math.abs(v)/scale));return v>=0?"rgba(56,163,146,"+a+")":"rgba(226,111,91,"+a+")";}
+function render2(){
+ var image=byId("imageGrid"),result=byId("resultGrid"),products=byId("productsGrid");image.replaceChildren();result.replaceChildren();products.replaceChildren();
+ image.style.gridTemplateColumns="repeat(7,39px)";result.style.gridTemplateColumns="repeat(5,39px)";products.style.gridTemplateColumns="repeat(3,1fr)";
+ for(var r=0;r<7;r++)for(var c=0;c<7;c++){
+  (function(r,c){var cell=el("button","cell editable"+(r>=selected[0]&&r<selected[0]+3&&c>=selected[1]&&c<selected[1]+3?" active":""),fmt(grid[r][c]));cell.type="button";cell.style.background=paintInput(grid[r][c]);cell.title="X["+r+","+c+"] = "+fmt(grid[r][c])+" (클릭하여 수정)";
+   cell.setAttribute("aria-label",cell.title);cell.addEventListener("click",function(){grid[r][c]=grid[r][c]>=2?0:grid[r][c]+1;render2();});image.appendChild(cell);})(r,c);
+ }
+ var out=output2(),scale=Math.max(1,...out.flat().map(Math.abs));
+ for(var i=0;i<5;i++)for(var j=0;j<5;j++){
+  (function(i,j){var cell=el("button","cell editable"+(selected[0]===i&&selected[1]===j?" chosen":""),fmt(out[i][j]));cell.type="button";cell.style.background=paintOutput(out[i][j],scale);cell.title="Y["+i+","+j+"] = "+fmt(out[i][j]);cell.setAttribute("aria-label",cell.title);
+   cell.addEventListener("click",function(){selected=[i,j];render2();});result.appendChild(cell);})(i,j);
+ }
+ var terms=[],xvec=[],kvec=[];
+ for(var u=0;u<3;u++)for(var v=0;v<3;v++){
+  var x=grid[selected[0]+u][selected[1]+v],k=kernel[u][v],p=x*k;
+  xvec.push(fmt(x));kvec.push(fmt(k));terms.push(p);
+  var cell=el("div","cell",fmt(p));cell.style.width="100%";cell.style.fontSize="12px";cell.style.background=paintOutput(p,Math.max(1,Math.abs(p)));cell.title=fmt(x)+" × "+fmt(k)+" = "+fmt(p);products.appendChild(cell);
+ }
+ byId("patchLabel").textContent="Y["+selected[0]+","+selected[1]+"] · 입력 X["+selected[0]+".."+(selected[0]+2)+", "+selected[1]+".."+(selected[1]+2)+"]";
+ byId("patchFormula").textContent=terms.map(fmt).join(" + ")+" = "+fmt(out[selected[0]][selected[1]]);
+ byId("patchExplain").textContent="각 출력 픽셀마다 9개의 곱셈과 8개의 덧셈(누산)으로 계산합니다. 컬러는 양수/음수 크기를 나타냅니다.";
+ byId("im2colVector").textContent="선택된 패치 행 p = ["+xvec.join(", ")+"]\n커널 열벡터 w = ["+kvec.join(", ")+"]\np · w = "+fmt(out[selected[0]][selected[1]])+"\n전체 행렬 P (25×9) × w (9×1) = y (25×1)";
+}
+function renderKernelInputs(){var host=byId("kernelGrid");host.replaceChildren();for(var i=0;i<3;i++)for(var j=0;j<3;j++){
+ (function(i,j){var input=el("input","kernel-input");input.type="number";input.step="any";input.value=fmt(kernel[i][j]);input.setAttribute("aria-label","커널 K["+i+","+j+"]");input.addEventListener("input",function(){if(input.value.trim()===""||!Number.isFinite(Number(input.value)))return;kernel[i][j]=Number(input.value);byId("preset").value="custom";render2();});host.appendChild(input);})(i,j);
+ }}
+function setPreset(){var name=byId("preset").value;if(!PRESETS[name])return;kernel=PRESETS[name].map(function(row){return row.slice();});renderKernelInputs();render2();}
+byId("pattern").addEventListener("change",function(){grid=makePattern(byId("pattern").value);render2();});
+byId("preset").addEventListener("change",setPreset);
+byId("shift").addEventListener("click",function(){grid=grid.map(function(row){return [0].concat(row.slice(0,6));});render2();});
+byId("resetInput").addEventListener("click",function(){grid=makePattern(byId("pattern").value);render2();});
+grid=makePattern("edge");setPreset();
+document.querySelectorAll("[data-answer]").forEach(function(btn){btn.addEventListener("click",function(){var good=btn.getAttribute("data-answer")==="1";byId("quizResult").className="callout "+(good?"ok":"err");byId("quizResult").textContent=good?"정답입니다. CNN은 위치마다 동일한 커널 가중치를 재사용하며, 보통 상호상관 연산으로 구현됩니다.":"다시 확인해 보세요. CNN은 보통 필터를 뒤집지 않으며, 국소 연결과 가중치 공유가 핵심입니다.";});});
+/* Minimal invariants checked in the browser console. */
+var test=compute1({x:[1,2,3],h:[1,2,-1],mode:"conv"},2).sum;
+console.assert(test===6,"1D convolution self-test failed");
+console.assert(calc2(0,0)===grid[1][1],"2D identity self-test failed");
+})();
+</script></body></html>
